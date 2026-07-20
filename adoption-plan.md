@@ -26,3 +26,9 @@ To ensure the output is CI-consumable (so downstream GitHub Actions can determin
     "msg": "Mandatory field 'LAND1' (Country Key) is unmapped for customer record."
   }
 ]
+```
+## 5. First-step Commitment
+* **Action:** Deploy the custom `.github/agents/cmd-mapping-reviewer.agent.md` alongside a basic `PreToolUse` hook script to validate mandatory SAP KNA1 fields on new mapping script PRs.
+* **Repository:** `bosch-internal/sap-cmd-migrations`
+* **Date:** August 31, 2026.
+* **Defense:** Running a parallel "read-only" review agent is a low-risk, high-value first step that immediately prevents dirty data from progressing in the pipeline without mutating any production SAP environments.
