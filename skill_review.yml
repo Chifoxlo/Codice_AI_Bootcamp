@@ -1,0 +1,54 @@
+name: Adversarial Skill Review
+
+on:
+  pull_request:
+    paths:
+      - '**/SKILLS.md' # Triggers only when a SKILLS.md file is changed
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run Static Scanner
+        id: static_scan
+        run: |
+          # Assuming the script is in the 'scripts' directory
+          python scripts/security_scanner.py SKILLS.md > scan_results.json
+          echo "scan_output=$(cat scan_results.json)" >> $GITHUB_OUTPUT
+
+      - name: Check Static Scan Results
+        if: contains(steps.static_scan.outputs.scan_output, 'Vulnerabilities Found')
+        run: |
+          echo "::error file=SKILLS.md::Static scanner found vulnerabilities."
+          cat scan_results.json
+          exit 1
+      
+      - name: Run LLM as a Judge
+        id: llm_judge
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # Store API key in GitHub secrets
+        run: |
+          pip install openai
+          python scripts/llm_judge.py SKILLS.md > judge_verdict.json
+          echo "verdict=$(cat judge_verdict.json)" >> $GITHUB_OUTPUT
+      
+      - name: Post PR Comment with Verdict
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const verdict = `${{ steps.llm_judge.outputs.verdict }}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### 🤖 LLM Security Judge Verdict\n\n${verdict}`
+            });
+
